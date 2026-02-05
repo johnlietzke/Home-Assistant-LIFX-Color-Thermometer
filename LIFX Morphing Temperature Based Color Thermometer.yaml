@@ -1,6 +1,6 @@
 blueprint:
-  name: "LIFX Morph: Temperature (Fixed Undefined)"
-  description: "Fixes the 'temp_sensor is undefined' error by correctly mapping inputs."
+  name: "LIFX Color Morphing Temperature Thermometer"
+  description: "Subtle color shifting thermometer for LIFX devices with zones."
   domain: automation
   input:
     temp_sensor:
@@ -9,7 +9,7 @@ blueprint:
         entity:
           domain: sensor
           device_class: temperature
-    target_light:
+    target_light: 
       name: LIFX Light
       selector:
         entity:
