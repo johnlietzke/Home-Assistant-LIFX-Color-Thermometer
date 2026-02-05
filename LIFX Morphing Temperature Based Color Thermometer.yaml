@@ -1,31 +1,27 @@
 blueprint:
-  name: "LIFX Morph: Temperature Based Color Thermometer"
-  description: "Changes a LIFX light's morph effect palette based on a temperature sensor's value."
+  name: "LIFX Morph: Temperature (Fixed Color)"
+  description: "Fixes the 'staying white' issue by ensuring HSBK values are processed correctly."
   domain: automation
   input:
     temp_sensor:
       name: Temperature Sensor
-      description: The sensor that provides the temperature.
       selector:
         entity:
           domain: sensor
           device_class: temperature
     target_light:
       name: LIFX Light
-      description: The LIFX light to apply the morph effect to.
       selector:
         entity:
           domain: light
           integration: lifx
     brightness:
       name: Brightness
-      description: Brightness percentage for the effect.
       default: 60
       selector:
         number:
           min: 1
           max: 100
-          unit_of_measurement: "%"
 
 mode: restart
 
@@ -39,14 +35,14 @@ condition:
 
 action:
   - variables:
-      # Map the inputs to variables for use in templates
+      # Capture inputs
       target_light: !input target_light
-      brightness_pct: !input brightness
+      brightness_val: !input brightness
       temp: "{{ states(temp_sensor) | float(0) }}"
-      temp_sensor: !input temp_sensor
       
-      # Your core logic for color mapping
-      current_mid: >
+      # Determine the Midpoint Hue and Saturation
+      # Format: [Hue, Saturation]
+      color_data: >
         {% if temp <= 0 %} [0, 0] {% elif temp <= 3 %} [280, 7] {% elif temp <= 6 %} [281, 18] 
         {% elif temp <= 9 %} [282, 32] {% elif temp <= 12 %} [283, 47] {% elif temp <= 15 %} [284, 62] 
         {% elif temp <= 18 %} [285, 78] {% elif temp <= 21 %} [286, 79] {% elif temp <= 24 %} [287, 81] 
@@ -61,23 +57,23 @@ action:
         {% elif temp <= 99 %} [6, 40] {% elif temp <= 102 %} [6, 58] {% elif temp <= 105 %} [6, 74] 
         {% elif temp <= 108 %} [6, 69] {% elif temp <= 111 %} [6, 74] {% elif temp <= 114 %} [6, 74] 
         {% elif temp <= 117 %} [6, 77] {% else %} [6, 78] {% endif %}
-      
-      higher: "[{{ (current_mid[0] + 20) % 360 }}, {{ current_mid[1] }}]"
-      lower: "[{{ (current_mid[0] - 20) % 360 }}, {{ current_mid[1] }}]"
 
   - action: lifx.effect_morph
     data:
       speed: 2
       power_on: true
       palette: >
-        {% set c_mid = current_mid if current_mid is list else from_json(current_mid) %} 
-        {% set c_high = higher if higher is list else from_json(higher) %} 
-        {% set c_low = lower if lower is list else from_json(lower) %}
-        {% set colors = [c_high, c_mid, c_mid, c_low] %} 
-        {% set ns = namespace(hsbk=[]) %} 
-        {% for c in colors %}
-          {% set ns.hsbk = ns.hsbk + [[c[0], c[1], brightness_pct, 3500]] %}
-        {% endfor %} 
-        {{ ns.hsbk }}
+        {% set mid = color_data if color_data is list else from_json(color_data) %}
+        {% set h = mid[0] | int %}
+        {% set s = mid[1] | int %}
+        {% set b = brightness_val | int %}
+        
+        {# Create a 4-color palette based on the temperature hue #}
+        [
+          [{{ (h + 20) % 360 }}, {{ s }}, {{ b }}, 3500],
+          [{{ h }}, {{ s }}, {{ b }}, 3500],
+          [{{ h }}, {{ s }}, {{ b }}, 3500],
+          [{{ (h - 20) % 360 }}, {{ s }}, {{ b }}, 3500]
+        ]
     target:
       entity_id: !input target_light
