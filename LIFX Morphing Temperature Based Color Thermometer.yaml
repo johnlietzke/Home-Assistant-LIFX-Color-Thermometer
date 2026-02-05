@@ -1,6 +1,6 @@
 blueprint:
-  name: "LIFX Morph: Temperature (Fixed Color)"
-  description: "Fixes the 'staying white' issue by ensuring HSBK values are processed correctly."
+  name: "LIFX Morph: Temperature (Fixed Undefined)"
+  description: "Fixes the 'temp_sensor is undefined' error by correctly mapping inputs."
   domain: automation
   input:
     temp_sensor:
@@ -32,16 +32,18 @@ trigger:
 condition:
   - condition: template
     value_template: "{{ is_state(target_light, 'on') }}"
+    # We define target_light below in variables to make this work
 
 action:
   - variables:
-      # Capture inputs
+      # This is the critical part: mapping the !input to a usable variable
+      temp_sensor_entity: !input temp_sensor
       target_light: !input target_light
       brightness_val: !input brightness
-      temp: "{{ states(temp_sensor) | float(0) }}"
       
-      # Determine the Midpoint Hue and Saturation
-      # Format: [Hue, Saturation]
+      # Now we use the variable name 'temp_sensor_entity' instead of the raw input
+      temp: "{{ states(temp_sensor_entity) | float(0) }}"
+      
       color_data: >
         {% if temp <= 0 %} [0, 0] {% elif temp <= 3 %} [280, 7] {% elif temp <= 6 %} [281, 18] 
         {% elif temp <= 9 %} [282, 32] {% elif temp <= 12 %} [283, 47] {% elif temp <= 15 %} [284, 62] 
@@ -67,8 +69,6 @@ action:
         {% set h = mid[0] | int %}
         {% set s = mid[1] | int %}
         {% set b = brightness_val | int %}
-        
-        {# Create a 4-color palette based on the temperature hue #}
         [
           [{{ (h + 20) % 360 }}, {{ s }}, {{ b }}, 3500],
           [{{ h }}, {{ s }}, {{ b }}, 3500],
