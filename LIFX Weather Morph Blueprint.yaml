@@ -49,7 +49,7 @@ action:
       weather_state: "{{ states(weather_entity) }}"
       temp_val: "{{ states(temp_entity) | float(0) }}"
       is_night: "{{ is_state('sun.sun', 'below_horizon') }}"
-      bri_temp: "{{ 50 if is_night else 60 }}"
+      bri_temp: "{{ 50 if is_night else 80 }}"
       bri_weather: "{{ 20 if is_night else 60 }}"
       
       temperature: |
