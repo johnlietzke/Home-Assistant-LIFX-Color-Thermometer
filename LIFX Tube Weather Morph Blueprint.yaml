@@ -74,7 +74,7 @@ action:
         {% elif t >= 73 %} [51, 100]    {# Wheat Yellow #}
         {# PLEASANT: Mid-range Yellows and Warm Whites #}
         {% elif t >= 70 %} [60, 100]    {# Sunny Yellow #}
-        {% elif t >= 67 %} [60, 12]     {# Warm Off-White (Low Saturation) #}
+        {% elif t >= 67 %} [85, 65]     {# Pale Chartreuse / Spring Bud #}
         {# COOL: Diverse Greens #}
         {% elif t >= 64 %} [120, 76]    {# Forest Green #}
         {% elif t >= 61 %} [90, 100]    {# Lime Green #}
