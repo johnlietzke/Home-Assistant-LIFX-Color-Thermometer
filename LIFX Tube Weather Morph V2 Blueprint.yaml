@@ -1,5 +1,5 @@
 blueprint:
-  name: 'LIFX Tube: Weather Morph V2 Blueprint'
+  name: 'LIFX Tube: Weather Morph V2'
   description: >-
     A dynamic environmental lighting script that adjusts color based on
     temperature and weather patterns, with automatic brightness dimming for night-time use.
