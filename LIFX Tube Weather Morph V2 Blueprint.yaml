@@ -4,6 +4,10 @@ blueprint:
     A dynamic environmental lighting script that adjusts color based on
     temperature and weather patterns, with automatic brightness dimming for night-time use.
   domain: automation
+
+  # ===========================================================================
+  # 1. USER INPUT SELECTORS
+  # ===========================================================================
   input:
     target_light:
       name: LIFX Light
@@ -13,6 +17,7 @@ blueprint:
           domain:
             - light
           multiple: false
+
     temp_sensor:
       name: Temperature Sensor
       description: The sensor used to determine the temperature color base.
@@ -23,6 +28,7 @@ blueprint:
           device_class:
             - temperature
           multiple: false
+
     weather_sensor:
       name: Weather Entity
       description: The weather provider for atmospheric effects.
@@ -32,117 +38,193 @@ blueprint:
             - weather
           multiple: false
 
+# Restart mode ensures new triggers instantly override running morph cycles
 mode: restart
 
+# ===========================================================================
+# 2. AUTOMATION TRIGGERS
+# ===========================================================================
 trigger:
+  # Re-run when local temperature changes
   - platform: state
     entity_id: !input temp_sensor
+
+  # Re-run when weather conditions update (rain, fog, clear-night, etc.)
   - platform: state
     entity_id: !input weather_sensor
+
+  # Re-run at sunrise/sunset to toggle day vs night brightness profiles
   - platform: state
     entity_id: sun.sun
+
+  # Re-run when the tube light turns ON so it adopts current state immediately
   - platform: state
     entity_id: !input target_light
     from: 'off'
     to: 'on'
 
+# ===========================================================================
+# 3. SAFETY CONDITIONS
+# ===========================================================================
 condition:
+  # Only execute if the target light is currently powered ON
   - condition: state
     entity_id: !input target_light
     state: 'on'
 
+# ===========================================================================
+# 4. ACTION BLOCK & VARIABLE COMPUTATIONS
+# ===========================================================================
 action:
   - variables:
+      # Map input selectors to local variables
       weather_entity: !input weather_sensor
       temp_entity: !input temp_sensor
+
+      # Extract current state values
       weather_state: "{{ states(weather_entity) }}"
       temp_val: "{{ states(temp_entity) | float(0) }}"
       is_night: "{{ is_state('sun.sun', 'below_horizon') }}"
-      bri_temp: "{{ 50 if is_night else 80 }}"
-      bri_weather: "{{ 20 if is_night else 60 }}"
-      
-      # Evaluated directly into native HA list types [Hue, Saturation]
-      temp_hs: >-
+
+      # Brightness profiles (Day: 80% temp / 60% weather | Night: 50% temp / 20% weather)
+      temperature_brightness: "{{ 50 if is_night else 80 }}"
+      weather_brightness: "{{ 20 if is_night else 60 }}"
+
+      # -----------------------------------------------------------------------
+      # Temperature [Hue, Saturation] Lookup Scalar
+      # Evaluated directly into native Jinja2 lists to avoid string-parsing errors
+      # -----------------------------------------------------------------------
+      temperature: >-
         {% set t = temp_val %}
-        {% if t >= 112 %}[360, 98]
-        {% elif t >= 109 %}[360, 99]
-        {% elif t >= 103 %}[0, 100]
-        {% elif t >= 88 %}[9, 72]
-        {% elif t >= 85 %}[16, 100]
-        {% elif t >= 82 %}[33, 100]
-        {% elif t >= 79 %}[39, 100]
-        {% elif t >= 76 %}[43, 75]
-        {% elif t >= 73 %}[51, 100]
-        {% elif t >= 70 %}[60, 100]
-        {% elif t >= 67 %}[85, 65]
-        {% elif t >= 64 %}[120, 76]
-        {% elif t >= 61 %}[90, 100]
-        {% elif t >= 52 %}[120, 73]
-        {% elif t >= 49 %}[180, 40]
-        {% elif t >= 43 %}[180, 100]
-        {% elif t >= 40 %}[197, 43]
-        {% elif t >= 37 %}[195, 100]
-        {% elif t >= 34 %}[225, 71]
-        {% elif t >= 28 %}[240, 100]
-        {% elif t >= 25 %}[235, 77]
-        {% elif t >= 22 %}[275, 100]
-        {% elif t >= 19 %}[282, 75]
-        {% elif t >= 16 %}[300, 45]
-        {% elif t >= 13 %}[300, 28]
-        {% elif t >= 10 %}[300, 12]
-        {% elif t >= 7 %}[240, 9]
-        {% elif t >= 4 %}[240, 3]
-        {% else %}[0, 0]
+        {# EXTREME HEAT: Deep Crimson to Magenta tones #}
+        {% if t >= 112 %} [360, 98]       {# Deep Crimson #}
+        {% elif t >= 109 %} [360, 99]    {# Intense Red #}
+        {% elif t >= 106 %} [0, 100]     {# Pure Red #}
+        {% elif t >= 103 %} [0, 99]      {# Bright Red #}
+        {# TRIPLE DIGITS: Saturated Signal Reds #}
+        {% elif t >= 100 %} [0, 98]      {# Signal Red #}
+        {% elif t >= 97 %} [0, 100]      {# High Red #}
+        {% elif t >= 94 %} [0, 100]      {# Standard Red #}
+        {% elif t >= 91 %} [0, 100]      {# Soft Red #}
+        {# HOT: Transitioning into Oranges #}
+        {% elif t >= 88 %} [9, 72]       {# Burnt Orange #}
+        {% elif t >= 85 %} [16, 100]     {# Safety Orange #}
+        {# WARM: Amber and Golden Hour hues #}
+        {% elif t >= 82 %} [33, 100]     {# Golden Amber #}
+        {% elif t >= 79 %} [39, 100]     {# Soft Amber #}
+        {% elif t >= 76 %} [43, 75]      {# Pale Gold #}
+        {% elif t >= 73 %} [51, 100]     {# Wheat Yellow #}
+        {# PLEASANT: Mid-range Yellows and Warm Whites #}
+        {% elif t >= 70 %} [60, 100]     {# Sunny Yellow #}
+        {% elif t >= 67 %} [85, 65]      {# Pale Chartreuse / Spring Bud #}
+        {# COOL: Diverse Greens #}
+        {% elif t >= 64 %} [120, 76]     {# Forest Green #}
+        {% elif t >= 61 %} [90, 100]     {# Lime Green #}
+        {% elif t >= 58 %} [120, 73]     {# Leaf Green #}
+        {% elif t >= 55 %} [120, 73]     {# Grass Green #}
+        {% elif t >= 52 %} [120, 100]    {# Pure Green #}
+        {# CHILLY: Transition to Cyan and Ice Blue #}
+        {% elif t >= 49 %} [180, 40]     {# Soft Cyan #}
+        {% elif t >= 46 %} [180, 100]    {# Electric Cyan #}
+        {% elif t >= 43 %} [180, 100]    {# Bright Turquoise #}
+        {% elif t >= 40 %} [197, 43]     {# Ice Blue #}
+        {# COLD: Deep Blues #}
+        {% elif t >= 37 %} [195, 100]    {# Sky Blue #}
+        {% elif t >= 34 %} [225, 71]     {# Ocean Blue #}
+        {% elif t >= 31 %} [240, 100]    {# Deep Cobalt #}
+        {# FREEZING: Purples, Magentas, and Arctic Whites #}
+        {% elif t >= 28 %} [240, 100]    {# Pure Blue #}
+        {% elif t >= 25 %} [235, 77]     {# Periwinkle #}
+        {% elif t >= 22 %} [275, 100]    {# Deep Purple #}
+        {% elif t >= 19 %} [282, 75]     {# Amethyst #}
+        {% elif t >= 16 %} [300, 45]     {# Magenta Mist #}
+        {% elif t >= 13 %} [300, 28]     {# Pale Pink #}
+        {% elif t >= 10 %} [300, 12]     {# Pinkish White #}
+        {% elif t >= 7 %} [240, 9]       {# Cool White #}
+        {% elif t >= 4 %} [240, 3]       {# Arctic White #}
+        {% elif t >= 1 %} [0, 0]         {# Pure White #}
+        {% else %} [0, 0]                {# Below Zero White #}
         {% endif %}
 
-      weather_hs: >-
+      # -----------------------------------------------------------------------
+      # Environmental Conditions [Hue, Saturation] Lookup
+      # Assigns color attributes based on atmospheric state
+      # -----------------------------------------------------------------------
+      weather: >-
         {% set w = weather_state %}
-        {% if w == 'sunny' %}[45, 100]
-        {% elif w == 'clear-night' %}[235, 90]
-        {% elif w == 'aurora' %}[140, 100]
-        {% elif w == 'partlycloudy' %}[200, 20]
-        {% elif w == 'cloudy' %}[0, 0]
-        {% elif w in ['rainy', 'pouring'] %}[210, 90]
-        {% elif w == 'lightning-rainy' %}[260, 40]
-        {% elif w in ['snowy', 'snowy-rainy'] %}[190, 10]
-        {% elif w == 'fog' %}[200, 10]
-        {% else %}[200, 10]
+        {% if w == 'sunny' %}[45, 100]              {# Sunny: Golden Sun Accent #}
+        {% elif w == 'clear-night' %}[235, 90]     {# Clear Night: Deep Sky Indigo #}
+        {% elif w == 'aurora' %}[140, 100]          {# Aurora: Emerald Green #}
+        {% elif w == 'partlycloudy' %}[200, 20]     {# Partly Cloudy: Soft Atmosphere Blue #}
+        {% elif w == 'cloudy' %}[0, 0]              {# Cloudy: Overcast Neutral Gray #}
+        {% elif w in ['rainy', 'pouring'] %}[210, 90] {# Rain: Deep Storm Blue #}
+        {% elif w == 'lightning-rainy' %}[260, 40]  {# Lightning: Thunderstorm Violet #}
+        {% elif w in ['snowy', 'snowy-rainy'] %}[190, 10] {# Snow: Soft Pale Ice #}
+        {% elif w == 'fog' %}[200, 10]              {# Fog: Cool Mist Gray #}
+        {% else %}[200, 10]                         {# Default Fallback: Cool Gray #}
         {% endif %}
 
+  # ===========================================================================
+  # 5. HARDWARE EXECUTION: LIFX MORPH EFFECT
+  # ===========================================================================
   - action: lifx.effect_morph
     target:
       entity_id: !input target_light
     data:
       power_on: true
-      speed: >-
-        {% if weather_state == 'lightning-rainy' %} 5
-        {% elif weather_state in ['rainy', 'pouring', 'windy', 'windy-variant'] %} 4
-        {% elif weather_state == 'clear-night' %} 3
-        {% elif weather_state in ['fog', 'aurora'] %} 1
-        {% else %} 2
-        {% endif %}
-      palette: >-
-        {% set th, ts = temp_hs %}
-        {% set wh, ws = weather_hs %}
-        {% set bt = bri_temp | int %}
-        {% set bw = bri_weather | int %}
-        {% set k_warm = 3500 %}
-        {% set k_star = 9000 %}
 
+      # -----------------------------------------------------------------------
+      # Morph Speed (1 = Very Slow/Fluid, 5 = Rapid/Active)
+      # -----------------------------------------------------------------------
+      speed: >-
+        {% if weather_state == 'lightning-rainy' %} 5              {# Rapid pulse for flashes #}
+        {% elif weather_state in ['rainy', 'pouring', 'windy', 'windy-variant'] %} 4 {# Active storm motion #}
+        {% elif weather_state == 'clear-night' %} 3               {# Gentle, steady nighttime pulse #}
+        {% elif weather_state in ['fog', 'aurora'] %} 1            {# Slow, atmospheric drift #}
+        {% else %} 2                                               {# Standard steady morph speed #}
+        {% endif %}
+
+      # -----------------------------------------------------------------------
+      # 4-Slot Palette Array [[H, S, B, K], [H, S, B, K], ...]
+      # Blends Temperature (75% normal) with Environmental Conditions (25%)
+      # -----------------------------------------------------------------------
+      palette: >-
+        {% set th, ts = temperature %}
+        {% set wh, ws = weather %}
+        {% set bt = temperature_brightness | int %}
+        {% set bw = weather_brightness | int %}
+        {% set k_warm = 3500 %}  {# Base Kelvin for warm/temperature zones #}
+        {% set k_star = 9000 %}  {# High-Kelvin cool white for starlight/void zones #}
+
+        {# Heatwave Over-100°F: Thermal Alert Palette #}
         {% if temp_val >= 100 %}
           {{ [[th, ts, bt, k_warm], [16, 100, bt + 10, k_warm], [th, ts, bt - 10, k_warm], [50, 100, bt + 20, k_warm]] }}
+
+        {# Aurora Effect: 100% Atmospheric Green/Purple Wash #}
         {% elif weather_state == 'aurora' %}
           {{ [[140, 100, bw + 20, k_star], [280, 80, bw + 10, k_star], [180, 100, bw, k_star], [140, 70, bw + 30, k_star]] }}
+
+        {# Lightning-Rainy: 50% Temp, 25% Purple Storm, 25% High-Kelvin Flash #}
         {% elif weather_state == 'lightning-rainy' %}
           {{ [[th, ts, bt, k_warm], [th, ts, bt, k_warm], [260, 60, bw, k_warm], [0, 0, 80, 9000]] }}
+
+        {# Rain / Pouring: 50% Storm Blue, 25% Temp, 25% High-Contrast Rain Accent #}
         {% elif weather_state in ['rainy', 'pouring'] %}
           {{ [[th, ts, bt, k_warm], [210, 90, bw, k_warm], [210, 90, bw, k_warm], [180, 20, 100, k_star]] }}
+
+        {# Clear Night: 25% Temp, 25% Night Blue, 50% Starlight Voids (0% Sat, 9000K) #}
         {% elif weather_state == 'clear-night' %}
           {{ [[th, ts, bt, k_warm], [wh, ws, bw, k_warm], [0, 0, 100, k_star], [0, 0, 100, k_star]] }}
+
+        {# Fog: 75% Low-Saturation Gray/Mist, 25% Dimmed Temp Base #}
         {% elif weather_state == 'fog' %}
           {{ [[th, ts, bt - 10, k_warm], [0, 0, bw, k_warm], [0, 0, bw, k_warm], [200, 15, bw, k_warm]] }}
+
+        {# Windy / Windy-Variant: 50% Temp, 50% Cool White Breeze Accents #}
         {% elif weather_state in ['windy', 'windy-variant'] %}
           {{ [[th, ts, bt, k_warm], [th, ts, bt, k_warm], [0, 0, bw + 10, k_star], [0, 0, bw + 10, k_star]] }}
+
+        {# Standard Default (Sunny, Cloudy, Partly Cloudy): 75% Temp Base, 25% Environmental Accent #}
         {% else %}
           {{ [[th, ts, bt, k_warm], [th, ts, bt, k_warm], [th, ts, bt, k_warm], [wh, ws, bw, k_warm]] }}
         {% endif %}
