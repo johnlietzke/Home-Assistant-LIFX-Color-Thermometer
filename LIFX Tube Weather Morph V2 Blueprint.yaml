@@ -1,0 +1,148 @@
+blueprint:
+  name: 'LIFX Tube: Weather Morph Blueprint'
+  description: >-
+    A dynamic environmental lighting script that adjusts color based on
+    temperature and weather patterns, with automatic brightness dimming for night-time use.
+  domain: automation
+  input:
+    target_light:
+      name: LIFX Light
+      description: The LIFX light (or group) to apply the Morph effect to.
+      selector:
+        entity:
+          domain:
+            - light
+          multiple: false
+    temp_sensor:
+      name: Temperature Sensor
+      description: The sensor used to determine the temperature color base.
+      selector:
+        entity:
+          domain:
+            - sensor
+          device_class:
+            - temperature
+          multiple: false
+    weather_sensor:
+      name: Weather Entity
+      description: The weather provider for atmospheric effects.
+      selector:
+        entity:
+          domain:
+            - weather
+          multiple: false
+
+mode: restart
+
+trigger:
+  - platform: state
+    entity_id: !input temp_sensor
+  - platform: state
+    entity_id: !input weather_sensor
+  - platform: state
+    entity_id: sun.sun
+  - platform: state
+    entity_id: !input target_light
+    from: 'off'
+    to: 'on'
+
+condition:
+  - condition: state
+    entity_id: !input target_light
+    state: 'on'
+
+action:
+  - variables:
+      weather_entity: !input weather_sensor
+      temp_entity: !input temp_sensor
+      weather_state: "{{ states(weather_entity) }}"
+      temp_val: "{{ states(temp_entity) | float(0) }}"
+      is_night: "{{ is_state('sun.sun', 'below_horizon') }}"
+      bri_temp: "{{ 50 if is_night else 80 }}"
+      bri_weather: "{{ 20 if is_night else 60 }}"
+      
+      # Returning valid JSON string arrays that can be safely loaded
+      temp_hs: >-
+        {% set t = temp_val %}
+        {% if t >= 112 %}[360, 98]
+        {% elif t >= 109 %}[360, 99]
+        {% elif t >= 103 %}[0, 100]
+        {% elif t >= 88 %}[9, 72]
+        {% elif t >= 85 %}[16, 100]
+        {% elif t >= 82 %}[33, 100]
+        {% elif t >= 79 %}[39, 100]
+        {% elif t >= 76 %}[43, 75]
+        {% elif t >= 73 %}[51, 100]
+        {% elif t >= 70 %}[60, 100]
+        {% elif t >= 67 %}[85, 65]
+        {% elif t >= 64 %}[120, 76]
+        {% elif t >= 61 %}[90, 100]
+        {% elif t >= 52 %}[120, 73]
+        {% elif t >= 49 %}[180, 40]
+        {% elif t >= 43 %}[180, 100]
+        {% elif t >= 40 %}[197, 43]
+        {% elif t >= 37 %}[195, 100]
+        {% elif t >= 34 %}[225, 71]
+        {% elif t >= 28 %}[240, 100]
+        {% elif t >= 25 %}[235, 77]
+        {% elif t >= 22 %}[275, 100]
+        {% elif t >= 19 %}[282, 75]
+        {% elif t >= 16 %}[300, 45]
+        {% elif t >= 13 %}[300, 28]
+        {% elif t >= 10 %}[300, 12]
+        {% elif t >= 7 %}[240, 9]
+        {% elif t >= 4 %}[240, 3]
+        {% else %}[0, 0]
+        {% endif %}
+
+      weather_hs: >-
+        {% set w = weather_state %}
+        {% if w == 'sunny' %}[45, 100]
+        {% elif w == 'clear-night' %}[235, 90]
+        {% elif w == 'aurora' %}[140, 100]
+        {% elif w == 'partlycloudy' %}[200, 20]
+        {% elif w == 'cloudy' %}[0, 0]
+        {% elif w in ['rainy', 'pouring'] %}[210, 90]
+        {% elif w == 'lightning-rainy' %}[260, 40]
+        {% elif w in ['snowy', 'snowy-rainy'] %}[190, 10]
+        {% elif w == 'fog' %}[200, 10]
+        {% else %}[200, 10]
+        {% endif %}
+
+  - action: lifx.effect_morph
+    target:
+      entity_id: !input target_light
+    data:
+      power_on: true
+      speed: >-
+        {% if weather_state == 'lightning-rainy' %} 5
+        {% elif weather_state in ['rainy', 'pouring', 'windy', 'windy-variant'] %} 4
+        {% elif weather_state == 'clear-night' %} 3
+        {% elif weather_state in ['fog', 'aurora'] %} 1
+        {% else %} 2
+        {% endif %}
+      palette: >-
+        {% set th, ts = temp_hs | from_json %}
+        {% set wh, ws = weather_hs | from_json %}
+        {% set bt = bri_temp | int %}
+        {% set bw = bri_weather | int %}
+        {% set k_warm = 3500 %}
+        {% set k_star = 9000 %}
+
+        {% if temp_val >= 100 %}
+          {{ [[th, ts, bt, k_warm], [16, 100, bt + 10, k_warm], [th, ts, bt - 10, k_warm], [50, 100, bt + 20, k_warm]] }}
+        {% elif weather_state == 'aurora' %}
+          {{ [[140, 100, bw + 20, k_star], [280, 80, bw + 10, k_star], [180, 100, bw, k_star], [140, 70, bw + 30, k_star]] }}
+        {% elif weather_state == 'lightning-rainy' %}
+          {{ [[th, ts, bt, k_warm], [th, ts, bt, k_warm], [260, 60, bw, k_warm], [0, 0, 80, 9000]] }}
+        {% elif weather_state in ['rainy', 'pouring'] %}
+          {{ [[th, ts, bt, k_warm], [210, 90, bw, k_warm], [210, 90, bw, k_warm], [180, 20, 100, k_star]] }}
+        {% elif weather_state == 'clear-night' %}
+          {{ [[th, ts, bt, k_warm], [wh, ws, bw, k_warm], [0, 0, 100, k_star], [0, 0, 100, k_star]] }}
+        {% elif weather_state == 'fog' %}
+          {{ [[th, ts, bt - 10, k_warm], [0, 0, bw, k_warm], [0, 0, bw, k_warm], [200, 15, bw, k_warm]] }}
+        {% elif weather_state in ['windy', 'windy-variant'] %}
+          {{ [[th, ts, bt, k_warm], [th, ts, bt, k_warm], [0, 0, bw + 10, k_star], [0, 0, bw + 10, k_star]] }}
+        {% else %}
+          {{ [[th, ts, bt, k_warm], [th, ts, bt, k_warm], [th, ts, bt, k_warm], [wh, ws, bw, k_warm]] }}
+        {% endif %}
