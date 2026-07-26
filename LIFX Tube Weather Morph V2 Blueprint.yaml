@@ -1,5 +1,5 @@
 blueprint:
-  name: 'LIFX Tube: Weather Morph V2'
+  name: 'LIFX Tube: Weather Morph V2 Blueprint'
   description: >-
     A dynamic environmental lighting script that adjusts color based on
     temperature and weather patterns, with automatic brightness dimming for night-time use.
@@ -61,7 +61,7 @@ action:
       bri_temp: "{{ 50 if is_night else 80 }}"
       bri_weather: "{{ 20 if is_night else 60 }}"
       
-      # Returning valid JSON string arrays that can be safely loaded
+      # Evaluated directly into native HA list types [Hue, Saturation]
       temp_hs: >-
         {% set t = temp_val %}
         {% if t >= 112 %}[360, 98]
@@ -122,8 +122,8 @@ action:
         {% else %} 2
         {% endif %}
       palette: >-
-        {% set th, ts = temp_hs | from_json %}
-        {% set wh, ws = weather_hs | from_json %}
+        {% set th, ts = temp_hs %}
+        {% set wh, ws = weather_hs %}
         {% set bt = bri_temp | int %}
         {% set bw = bri_weather | int %}
         {% set k_warm = 3500 %}
