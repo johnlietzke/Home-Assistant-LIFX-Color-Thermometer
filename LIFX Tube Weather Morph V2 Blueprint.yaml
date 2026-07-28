@@ -153,7 +153,7 @@ action:
       weather: >-
         {% set w = weather_state %}
         {% if w == 'sunny' %}[45, 100]              {# Sunny: Golden Sun Accent #}
-        {% elif w == 'clear-night' %}[240, 5]       {# Clear Night: Midnight Void (1% Saturation) #}
+        {% elif w == 'clear-night' %}[240, 10]       {# Clear Night: Midnight Void (1% Saturation) #}
         {% elif w == 'aurora' %}[140, 100]          {# Aurora: Emerald Green #}
         {% elif w == 'partlycloudy' %}[200, 20]     {# Partly Cloudy: Soft Atmosphere Blue #}
         {% elif w == 'cloudy' %}[0, 0]              {# Cloudy: Overcast Neutral Gray #}
