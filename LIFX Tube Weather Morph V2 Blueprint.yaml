@@ -86,8 +86,8 @@ action:
       temp_val: "{{ states(temp_entity) | float(0) }}"
       is_night: "{{ is_state('sun.sun', 'below_horizon') }}"
 
-      # Brightness profiles (Day: 80% temp / 60% weather | Night: 80% clear-night temp / 50% night / 20% weather)
-      temperature_brightness: "{{ 80 if weather_state == 'clear-night' else (50 if is_night else 80) }}"
+      # Brightness profiles (Day: 80% temp / 60% weather | Night: 50% temp / 20% weather)
+      temperature_brightness: "{{ 50 if is_night else 80 }}"
       weather_brightness: "{{ 5 if weather_state == 'clear-night' else (20 if is_night else 60) }}"
 
       # -----------------------------------------------------------------------
@@ -211,7 +211,7 @@ action:
         {% elif weather_state in ['rainy', 'pouring'] %}
           {{ [[th, ts, bt, k_warm], [210, 90, bw, k_warm], [210, 90, bw, k_warm], [180, 20, 100, k_star]] }}
 
-        {# Clear Night: 3 Temp Slots (80% Day Base), 1 Environment Slot @ 5% #}
+        {# Clear Night: 3 Temp Slots (50% Night Base), 1 Environment Slot @ 5% #}
         {% elif weather_state == 'clear-night' %}
           {{ [[th, ts, bt, k_warm], [th, ts, bt, k_warm], [th, ts, bt, k_warm], [wh, ws, bw, k_warm]] }}
 
