@@ -211,9 +211,9 @@ action:
         {% elif weather_state in ['rainy', 'pouring'] %}
           {{ [[th, ts, bt, k_warm], [210, 90, bw, k_warm], [210, 90, bw, k_warm], [180, 20, 100, k_star]] }}
 
-        {# Clear Night: Slot 2 Temp, Slots 1, 3, 4 Environment Void @ 5% #}
+        {# Clear Night: Even Split (2 Slots Temperature @ 50%, 2 Slots Environmental @ 5%) #}
         {% elif weather_state == 'clear-night' %}
-          {{ [[wh, ws, bw, k_warm], [th, ts, bt, k_warm], [wh, ws, bw, k_warm], [wh, ws, bw, k_warm]] }}
+          {{ [[th, ts, bt, k_warm], [th, ts, bt, k_warm], [wh, ws, bw, k_warm], [wh, ws, bw, k_warm]] }}
 
         {# Fog: 75% Low-Saturation Gray/Mist, 25% Dimmed Temp Base #}
         {% elif weather_state == 'fog' %}
