@@ -88,7 +88,7 @@ action:
 
       # Brightness profiles (Day: 80% temp / 60% weather | Night: 50% temp / 20% weather)
       temperature_brightness: "{{ 50 if is_night else 80 }}"
-      weather_brightness: "{{ 20 if is_night else 60 }}"
+      weather_brightness: "{{ 5 if weather_state == 'clear-night' else (20 if is_night else 60) }}"
 
       # -----------------------------------------------------------------------
       # Temperature [Hue, Saturation] Lookup Scalar
@@ -153,7 +153,7 @@ action:
       weather: >-
         {% set w = weather_state %}
         {% if w == 'sunny' %}[45, 100]              {# Sunny: Golden Sun Accent #}
-        {% elif w == 'clear-night' %}[235, 90]     {# Clear Night: Deep Sky Indigo #}
+        {% elif w == 'clear-night' %}[280, 100]     {# Clear Night: Purple Black #}
         {% elif w == 'aurora' %}[140, 100]          {# Aurora: Emerald Green #}
         {% elif w == 'partlycloudy' %}[200, 20]     {# Partly Cloudy: Soft Atmosphere Blue #}
         {% elif w == 'cloudy' %}[0, 0]              {# Cloudy: Overcast Neutral Gray #}
@@ -177,11 +177,11 @@ action:
       # Morph Speed (1 = Very Slow/Fluid, 5 = Rapid/Active)
       # -----------------------------------------------------------------------
       speed: >-
-        {% if weather_state == 'lightning-rainy' %} 5              {# Rapid pulse for flashes #}
+        {% if weather_state == 'lightning-rainy' %} 5               {# Rapid pulse for flashes #}
         {% elif weather_state in ['rainy', 'pouring', 'windy', 'windy-variant'] %} 4 {# Active storm motion #}
         {% elif weather_state == 'clear-night' %} 3               {# Gentle, steady nighttime pulse #}
         {% elif weather_state in ['fog', 'aurora'] %} 1            {# Slow, atmospheric drift #}
-        {% else %} 2                                               {# Standard steady morph speed #}
+        {% else %} 2                                                {# Standard steady morph speed #}
         {% endif %}
 
       # -----------------------------------------------------------------------
