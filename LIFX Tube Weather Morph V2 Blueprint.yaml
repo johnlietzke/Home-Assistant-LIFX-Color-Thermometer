@@ -153,7 +153,7 @@ action:
       weather: >-
         {% set w = weather_state %}
         {% if w == 'sunny' %}[45, 100]              {# Sunny: Golden Sun Accent #}
-        {% elif w == 'clear-night' %}[280, 100]     {# Clear Night: Purple Black #}
+        {% elif w == 'clear-night' %}[280, 0]       {# Clear Night: Dark Void (0% Saturation) #}
         {% elif w == 'aurora' %}[140, 100]          {# Aurora: Emerald Green #}
         {% elif w == 'partlycloudy' %}[200, 20]     {# Partly Cloudy: Soft Atmosphere Blue #}
         {% elif w == 'cloudy' %}[0, 0]              {# Cloudy: Overcast Neutral Gray #}
@@ -179,7 +179,7 @@ action:
       speed: >-
         {% if weather_state == 'lightning-rainy' %} 5               {# Rapid pulse for flashes #}
         {% elif weather_state in ['rainy', 'pouring', 'windy', 'windy-variant'] %} 4 {# Active storm motion #}
-        {% elif weather_state == 'clear-night' %} 3               {# Gentle, steady nighttime pulse #}
+        {% elif weather_state == 'clear-night' %} 2               {# Normal steady morph speed #}
         {% elif weather_state in ['fog', 'aurora'] %} 1            {# Slow, atmospheric drift #}
         {% else %} 2                                                {# Standard steady morph speed #}
         {% endif %}
@@ -212,9 +212,9 @@ action:
         {% elif weather_state in ['rainy', 'pouring'] %}
           {{ [[th, ts, bt, k_warm], [210, 90, bw, k_warm], [210, 90, bw, k_warm], [180, 20, 100, k_star]] }}
 
-        {# Clear Night: 75% Temp Base, 25% Deep Purple Black #}
+        {# Clear Night: 50/50 Split (1 & 4 Environment Void @ 5%, 2 & 3 Temperature) #}
         {% elif weather_state == 'clear-night' %}
-          {{ [[th, ts, bt, k_warm], [th, ts, bt, k_warm], [th, ts, bt, k_warm], [wh, ws, bw, k_warm]] }}
+          {{ [[wh, ws, bw, k_warm], [th, ts, bt, k_warm], [th, ts, bt, k_warm], [wh, ws, bw, k_warm]] }}
 
         {# Fog: 75% Low-Saturation Gray/Mist, 25% Dimmed Temp Base #}
         {% elif weather_state == 'fog' %}
