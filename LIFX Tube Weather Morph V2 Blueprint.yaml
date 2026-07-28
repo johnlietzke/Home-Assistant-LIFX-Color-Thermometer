@@ -86,8 +86,8 @@ action:
       temp_val: "{{ states(temp_entity) | float(0) }}"
       is_night: "{{ is_state('sun.sun', 'below_horizon') }}"
 
-      # Brightness profiles (Day: 80% temp / 60% weather | Night: 25% clear-night temp / 50% night / 20% weather)
-      temperature_brightness: "{{ (25 if weather_state == 'clear-night' else 50) if is_night else 80 }}"
+      # Brightness profiles (Day: 80% temp / 60% weather | Night: 50% temp / 20% weather)
+      temperature_brightness: "{{ 50 if is_night else 80 }}"
       weather_brightness: "{{ 5 if weather_state == 'clear-night' else (20 if is_night else 60) }}"
 
       # -----------------------------------------------------------------------
@@ -153,7 +153,7 @@ action:
       weather: >-
         {% set w = weather_state %}
         {% if w == 'sunny' %}[45, 100]              {# Sunny: Golden Sun Accent #}
-        {% elif w == 'clear-night' %}[280, 60]      {# Clear Night: Deep Purple (60% Saturation) #}
+        {% elif w == 'clear-night' %}[240, 20]      {# Clear Night: Midnight Void (20% Saturation) #}
         {% elif w == 'aurora' %}[140, 100]          {# Aurora: Emerald Green #}
         {% elif w == 'partlycloudy' %}[200, 20]     {# Partly Cloudy: Soft Atmosphere Blue #}
         {% elif w == 'cloudy' %}[0, 0]              {# Cloudy: Overcast Neutral Gray #}
@@ -211,9 +211,9 @@ action:
         {% elif weather_state in ['rainy', 'pouring'] %}
           {{ [[th, ts, bt, k_warm], [210, 90, bw, k_warm], [210, 90, bw, k_warm], [180, 20, 100, k_star]] }}
 
-        {# Clear Night: 3 Temp Slots (Dimmed to 25%), 1 Environment Slot @ 5% #}
+        {# Clear Night: 50/50 Split (1 & 4 Environment Void @ 5%, 2 & 3 Temperature) #}
         {% elif weather_state == 'clear-night' %}
-          {{ [[th, ts, bt, k_warm], [th, ts, bt, k_warm], [th, ts, bt, k_warm], [wh, ws, bw, k_warm]] }}
+          {{ [[wh, ws, bw, k_warm], [th, ts, bt, k_warm], [th, ts, bt, k_warm], [wh, ws, bw, k_warm]] }}
 
         {# Fog: 75% Low-Saturation Gray/Mist, 25% Dimmed Temp Base #}
         {% elif weather_state == 'fog' %}
