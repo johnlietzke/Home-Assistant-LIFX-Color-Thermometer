@@ -179,7 +179,7 @@ action:
       speed: >-
         {% if weather_state == 'lightning-rainy' %} 5               {# Rapid pulse for flashes #}
         {% elif weather_state in ['rainy', 'pouring', 'windy', 'windy-variant'] %} 4 {# Active storm motion #}
-        {% elif weather_state in ['fog', 'aurora'] %} 1            {# Slow, atmospheric drift #}
+        {% elif weather_state in ['fog', 'aurora', 'clear-night'] %} 1 {# Slow, atmospheric drift #}
         {% else %} 2                                                {# Standard steady morph speed #}
         {% endif %}
 
@@ -211,9 +211,9 @@ action:
         {% elif weather_state in ['rainy', 'pouring'] %}
           {{ [[th, ts, bt, k_warm], [210, 90, bw, k_warm], [210, 90, bw, k_warm], [180, 20, 100, k_star]] }}
 
-        {# Clear Night: Slot 2 Temp, Slots 1, 3, 4 Environment Void @ 5% #}
+        {# Clear Night: 50/50 Split (1 & 4 Environment Void @ 5%, 2 & 3 Temperature) #}
         {% elif weather_state == 'clear-night' %}
-          {{ [[wh, ws, bw, k_warm], [th, ts, bt, k_warm], [wh, ws, bw, k_warm], [wh, ws, bw, k_warm]] }}
+          {{ [[wh, ws, bw, k_warm], [th, ts, bt, k_warm], [th, ts, bt, k_warm], [wh, ws, bw, k_warm]] }}
 
         {# Fog: 75% Low-Saturation Gray/Mist, 25% Dimmed Temp Base #}
         {% elif weather_state == 'fog' %}
